@@ -1,7 +1,3 @@
-#things still not implemented here:
-#showing the work per timer increment
-
-
 
 #registers as arrays of bits of length 16 or 12
 #MSB is at arr[0] and LSB is at arr[15 || 12] to make it easier to output for visualisation
@@ -12,16 +8,86 @@ memory = [[0] * 16] * 4096
 PC = [0] * 12
 DR = [0] * 16
 AC = [0] * 16
-INPR = [0] * 8 
 IR = [0] * 16
-OUTR = [0] * 8
 opcode = [0] * 3
 program = [] #list of all commands in the program.txt 
-
+cycles = 0 #keeps track of how many cycles need to be completed
+instructions = 0 #keeps track of how many instructions need to be completed
+totalCycles = 0
+totalInstructions = 0
+bandwidth = 0
 
 #flags
 indirect = False #indirect bit
-E = 0 #error bit
+E = 1 #error bit
+
+#function thats responsible for making each instruction execute per clockcycle and handeling user inputs
+def checkAndWait():
+
+
+    global cycles
+    global instructions
+    global totalCycles
+    global totalInstructions
+
+    totalCycles += 1
+
+
+
+    user_command = ""
+    if(instructions > 0):
+        return
+    if(cycles > 0):
+        cycles -= 1
+        return
+    else:
+        while(cycles <= 0 and instructions <= 0):
+            print("choose a command: (N indicates the number in decimal)")
+            print("next_cycle | fast_cycle N | next_inst | fast_inst N | run | show reg_name | show mem N | show all | show profiler")
+            user_command = input()
+            user_command_split = user_command.split()
+            if(user_command_split[0] == "next_cycle"):
+                cycles += 1
+            elif(user_command_split[0] == "fast_cycle"):
+                cycles += int(user_command_split[1])
+            elif(user_command_split[0] == "next_inst"):
+                instructions += 1
+            elif(user_command_split[0] == "fast_inst"):
+                instructions += int(user_command_split[1])
+            elif(user_command_split[0] == "show"):
+                show(user_command_split)
+        
+def show(option):
+    global AC
+    global AR
+    global memory
+    global PC
+    global DR
+    global IR
+    if(option[1] == "AC"):
+        print("AC = ",hex(binToDec(AC)), "(binary:",AC,")")
+    if(option[1] == "PC"):
+        print("PC = ",hex(binToDec(PC)), "(binary:",PC,")")
+    if(option[1] == "AR"):
+        print("AR = ",hex(binToDec(AR)), "(binary:",AR,")")
+    if(option[1] == "DR"):
+        print("DR = ",hex(binToDec(DR)), "(binary:",DR,")")
+    if(option[1] == "IR"):
+        print("IR = ",hex(binToDec(IR)), "(binary:",IR,")")
+    if(option[1] == "mem"):
+        print("MEM[",option[2],"] = 0x",hex(binToDec(memory[option[2]])), "(binary:",memory[option[2]],")")
+    if(option[1] == "all"):
+        print("AC = ",hex(binToDec(AC)), "(binary:",AC,")")
+        print("PC = ",hex(binToDec(PC)), "(binary:",PC,")")
+        print("AR = ",hex(binToDec(AR)), "(binary:",AR,")")
+        print("DR = ",hex(binToDec(DR)), "(binary:",DR,")")
+        print("IR = ",hex(binToDec(IR)), "(binary:",IR,")")
+    if(option[1] == "profiler"):
+        print("cycles: ", totalCycles)
+        print("instruction: ", totalInstructions)
+        print("CPI: ", totalCycles/totalInstructions)
+        print("bandwidth: ", bandwidth)
+
 
 def fetchDecode():
     global IR
@@ -29,23 +95,39 @@ def fetchDecode():
     global opcode
     global PC
     global AR
+    global instructions
+    global bandwidth
 
+    checkAndWait()
+
+    print("AR <--  PC")
     current = binToDec(PC)
     AR = hexToBin(program[current])[4:16] #i have no idea if the program will always start at 0 or not since the proffesor described the program as an address + operation 
     #                      rather than just an operation so this is the a mathod that handels both cases
+    
+    print("AR = ", AR)
+
+    checkAndWait()
 
     location = binToDec(AR)
     print("reading IR in location:", location)
     IR = memory[location]
+    bandwidth += 1
+    print("Instruction in hand: 0x", hex(binToDec(IR)).split('x')[-1])
     PC = decToBin(current + 1)
     AR = IR[4:16]
     print("AR:", AR)
     indirect = IR[0]
     opcode = IR[1:4]
 
+    checkAndWait()
+
     if(indirect):
         location = binToDec(AR)
         AR = memory[location][4:16]
+        bandwidth += 1
+    
+    checkAndWait()
 
 
 
@@ -75,6 +157,9 @@ def hexToBin(num):
 
     return binOut
 
+def incInstructions():
+    global totalInstructions
+    totalInstructions += 1
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!these values are just here to test register instructions remove them before submitting!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 DR = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]
@@ -87,16 +172,28 @@ def AND():
     global memory
     global AR
     global AC
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
     location = binToDec(AR)
+    print("DR <-- M[AR]")
     DR = memory[location]
-    print("AC before:", AC)
-    print("DR before:", DR)
-    print("AR before:", AR)
+    bandwidth +=1
+    print("Changed DR")
+
+    checkAndWait()
+
+    print("AC <-- AC && DR")
     for i in range(len(AC)):
         AC[i] =  int(bool(AC[i]) & bool(DR[i]))
-    print("DR after:", DR)
-    print("AC after:", AC)
-    print("AR after:", AR)
+    print("Changed AC")
+    
+
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
+
 
 def ADD():
     global memory
@@ -104,20 +201,32 @@ def ADD():
     location = binToDec(AR)
     global AC
     global DR
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
     
-    print("AC before:", AC)
-    print("DR before:", DR)
-    print("AR before:", AR)
-
+    print("DR <-- M[AR]")
     DR = memory[location]
+    print("Changed DR")
+
+    bandwidth += 1
+    
+    checkAndWait()
+
     x = binToDec(AC)
     y = binToDec(DR)
 
+    print("AC <-- AC+DR")
     AC = decToBin((x + y))
+    print("Changed AC")
 
-    print("AC after:", AC)
-    print("DR after:", DR)
-    print("AR after:", AR)
+
+
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
+
 
 def LDA():
     global memory
@@ -125,54 +234,88 @@ def LDA():
     location = binToDec(AR)
     global AC
     global DR
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
 
-    print("AC before:", AC)
-    print("DR before:", DR)
-    print("AR before:", AR)
-    
+
+    print("DR <-- M[AR]")
     DR = memory[location]
+    print("Changed DR")
+
+    bandwidth += 1
+
+    checkAndWait()
 
     AC = DR
 
-    print("AC after:", AC)
-    print("DR after:", DR)
-    print("AR after:", AR)
+    print("AC <-- Dr")
+    print("Changed AC")
+
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
+
 
 def STA():
     global memory
     global AR
     global AC
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
     location = binToDec(AR)
 
-    print("AC before:", AC)
-    print("AR pointer location: ", location)
-    print("memory at AR before:", memory[location])
-
+    
+    print("MEM[AR] <-- AC")
+    print("Changed MEM[AR]")
 
     memory[location] = AC
 
-    print("AC after:", AC)
-    print("AR pointer location: ", location)
-    print("memory at AR after:", memory[location])
+    bandwidth += 1
+    
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
+
+    
 
 def BUN():
     global PC
-    print("PC before:", PC)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("PC <-- AR")
     PC = AR
-    print("PC after: ", PC)
+    print("Changed: PC")
+    
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def BSA():
     global memory
     global AR
     global PC
-    print("PC before:", PC)
-    print("AR before:", AR)
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
     location = binToDec(AR)
+    print("MEM[AR] <-- PC, AR <-- AR+1")
     memory[location] = PC
     AR += 1
+    print("Changed: MEM[AR], AR")
+    bandwidth += 1
+    checkAndWait()
+    print("PC <-- AR")
     PC = AR
-    print("PC after:", PC)
-    print("AR after:", AR)
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
+
 
 def ISZ():
     global memory
@@ -180,133 +323,194 @@ def ISZ():
     global PC
     global AC
     global DR
-    
+    global instructions
+    global bandwidth
+    global totalInstructions
+    totalInstructions += 1
+
     location = binToDec(AR)
     
-    print("AR before:", AR)
-    print("AC before:", AC)
-    print("DR before:", DR)
-    print("PC before:", PC)
-
+    print("DR <-- MEM[AR]")
     DR = memory[location]
+    bandwidth += 1
+    print("Changed: DR")
+    checkAndWait()
     x = binToDec(DR)
-
+    print("DR <-- DR + 1")
     DR = decToBin((x + 1))
+    print("Changed: DR")
+    checkAndWait()
+    print("MEM(AR) <-- DR")
+    bandwidth += 1 
     memory[location] = DR
+    print("Changed MEM[AR]")
+    print("if DR = 0 then PC <-- PC+1")
     if(binToDec(DR) == 0):
         x = binToDec(PC)
 
         PC = decToBin((x + 1))
-    print("AR after:", AR)
-    print("AC after:", AC)
-    print("DR after:", DR)
-    print("PC after:", PC)
+    
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 #register reffrence instructions
 def CLA():
     global AC
-    print("AC before: ", AC)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("AC = 0")
     AC = [0] * 16
-    print("AC after: ", AC)
+    print("Changed AC")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def CLE():
     global E
-    print("E before: ", E)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("E = 0")
     E = 0
-    print("E after: ", E)
+    print("Changed E", E)
+    
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def CMA():
-    print("AC before: ", AC)
+    global AC
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("AC <-- AC'")
     for i in range(len(AC)):
         AC[i] =  int(not(bool(AC[i])))
-    print("AC after: ", AC)
+    print("Changed AC")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def CME():
     global E
-    print("E before: ", E)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("E <-- E'")
     E = not(E)
-    print("E after: ", E)
+    print("Changed E")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def CIR():
     global AC
     global E
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
 
-    print("AC before: ", AC)
-    print("E before: ", E)
+    print("AC <-- shr Ac, AC[15] <-- E, E <-- AC[0]")
 
     E = AC[15] #again this is reversed between CIR and CIL since python arrays and the books visualisation of the registers are opposites
     x = binToDec(AC)
     x = x*2
     AC = decToBin(x)    
-    print("AC after: ", AC)
-    print("E after: ", E)
+    print("Changed AC, E")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def CIL():
     global AC
     global E
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
 
-    print("AC before: ", AC)
-    print("E before: ", E)
+    print("AC <-- shl AC, AC[0] <-- E, E <-- AC[15]")
 
     E = AC[0]
     x = binToDec(AC)
     x =int(x/2)
     AC = decToBin(x)
 
-    print("AC after: ", AC)
-    print("E after: ", E)
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 
 def INC():
     global AC
-    print("AC before: ", AC)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("AC <-- AC+1")
 
     x = binToDec(AC)
     x += 1
     AC = decToBin(x)
 
-    print("AC after: ", AC)
+    print("Changed AC")
 
 def SPA():
+    global AC
     global PC
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
 
-    print("AC before: ", AC)
-    print("PC before: ", PC)
+    print("If AC[15] = 0 then PC <-- PC+1")
     if(AC[0] == 0):
         x = binToDec(PC)
         PC = decToBin((x + 1))
-    print("AC after: ", AC)
-    print("PC after: ", PC)
+        print("Changed PC")
+    
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def SNA():
     global AC
     global PC
-    print("AC before: ", AC)
-    print("PC before: ", PC)
+    global instructions
+    print("If AC[15] = 1 then PC <-- PC+1")
     if(AC[0] == 1):
         x = binToDec(PC)
         PC = decToBin((x + 1))
-    print("AC after: ", AC)
-    print("PC after: ", PC)
+        print("Changed PC")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def SZA():
     global PC
-    global AR
-    print("AC before: ", AC)
-    print("PC before: ", PC)
+    global AC
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("If AC = 0 then PC <-- PC+1")
     if(binToDec(AR) == 0):
        x = binToDec(PC)
        PC = decToBin((x + 1))
-    print("AC after: ", AC)
-    print("PC after: ", PC)
+       print("Changed PC")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def SZE():
     global E
     global PC
-    print("E before: ", E)
-    print("PC before: ", PC)
+    global instructions
+    global totalInstructions
+    totalInstructions += 1
+    print("If E == 0 then PC <-- PC + 1")
     if(E == 0):
        x = binToDec(PC)
        PC = decToBin((x + 1))
-    print("E after: ", E)
-    print("PC after: ", PC)
+       print("Changed PC")
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()

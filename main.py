@@ -1,7 +1,3 @@
-#things not yet implemented here:
-#1) all the user control functions
-#2) showing the current instruction and the IR for that instruction
-
 
 import instructionsAndRegisters as InR #writing the whole name is annoying
 # declaring variables
@@ -22,6 +18,7 @@ registerInstructionDict = {
     8: InR.SNA,
     4: InR.SZA,
     2: InR.SZE,
+    1: quit
 }
 
 memoryInsructionDict = {
@@ -38,10 +35,10 @@ memoryInsructionDict = {
 
 #initialise data from data.txt
 def dataInit():
-    dFile = open("hexprogram/data.txt")
+    data = open('hexProgram/data.txt')
 
     #loops for everyline. Splits line into data and register values and saves them to memory
-    for line in dFile:
+    for line in data:
         temp = line.split()
         dRegister = temp[0]
         dData = temp[1]
@@ -50,21 +47,19 @@ def dataInit():
         location = int(dRegister, 16)
 
         InR.memory[location] = dData
-        print(location,"   ",InR.memory[location])
+        #print(location,"   ",InR.memory[location])
 
 def loadProgram():
-    pFile = open("hexprogram/program.txt")
+    pFile = open('hexProgram/program.txt')
     for line in pFile:
+        print(line)
         temp = line.split()
         pInstruction = temp[1]
         pAddress = temp[0]
         location = int(pAddress, 16)
         pInstruction = InR.hexToBin(pInstruction)
         InR.memory[location] = pInstruction
-        print("location saved to:",location)
-        print(InR.memory[location])
         InR.program.append(pAddress)
-
 
 if __name__ == "__main__":
     dataInit()
