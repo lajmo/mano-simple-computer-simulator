@@ -65,6 +65,9 @@ if __name__ == "__main__":
     dataInit()
     loadProgram()
     print(InR.program)
+    print("enter the entry point of your program: ")
+    entry = input()
+    InR.setEntry(entry)
     for line in InR.program:
         InR.fetchDecode()
         #register reffrence set

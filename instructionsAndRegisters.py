@@ -1,4 +1,3 @@
-
 #registers as arrays of bits of length 16 or 12
 #MSB is at arr[0] and LSB is at arr[15 || 12] to make it easier to output for visualisation
 #example: DR = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]
@@ -88,6 +87,9 @@ def show(option):
         print("CPI: ", totalCycles/totalInstructions)
         print("bandwidth: ", bandwidth)
 
+def setEntry(entry): #sets the programs entry point from the user
+    global PC
+    PC = hexToBin(entry)
 
 def fetchDecode():
     global IR
@@ -102,8 +104,7 @@ def fetchDecode():
 
     print("AR <--  PC")
     current = binToDec(PC)
-    AR = hexToBin(program[current])[4:16] #i have no idea if the program will always start at 0 or not since the proffesor described the program as an address + operation 
-    #                      rather than just an operation so this is the a mathod that handels both cases
+    AR = PC
     
     print("AR = ", AR)
 
@@ -114,7 +115,7 @@ def fetchDecode():
     IR = memory[location]
     bandwidth += 1
     print("Instruction in hand: 0x", hex(binToDec(IR)).split('x')[-1])
-    PC = decToBin(current + 1)
+    PC = decToBin(binToDec(PC) + 1)
     AR = IR[4:16]
     print("AR:", AR)
     indirect = IR[0]
