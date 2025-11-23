@@ -2,8 +2,6 @@
 import instructionsAndRegisters as InR #writing the whole name is annoying
 # declaring variables
 currentCommand = "" #stores the command as string for later translation
-data = [] #list of all data in the data.txt file
-currentOperation = [] #the current instruction as bits
 
 
 registerInstructionDict = {
@@ -18,7 +16,7 @@ registerInstructionDict = {
     8: InR.SNA,
     4: InR.SZA,
     2: InR.SZE,
-    1: quit
+    1: quit #the HLT function
 }
 
 memoryInsructionDict = {
@@ -35,7 +33,7 @@ memoryInsructionDict = {
 
 #initialise data from data.txt
 def dataInit():
-    data = open('hexProgram/data.txt')
+    data = open('hexProgram/data1.txt')
 
     #loops for everyline. Splits line into data and register values and saves them to memory
     for line in data:
@@ -47,32 +45,28 @@ def dataInit():
         location = int(dRegister, 16)
 
         InR.memory[location] = dData
-        #print(location,"   ",InR.memory[location])
 
 def loadProgram():
-    pFile = open('hexProgram/program.txt')
+    pFile = open('hexProgram/program1.txt')
     for line in pFile:
-        print(line)
         temp = line.split()
         pInstruction = temp[1]
         pAddress = temp[0]
         location = int(pAddress, 16)
         pInstruction = InR.hexToBin(pInstruction)
         InR.memory[location] = pInstruction
-        InR.program.append(pAddress)
 
 if __name__ == "__main__":
     dataInit()
     loadProgram()
-    print(InR.program)
     print("enter the entry point of your program: ")
     entry = input()
     InR.setEntry(entry)
-    for line in InR.program:
+    while True:
         InR.fetchDecode()
         #register reffrence set
         if(InR.binToDec(InR.opcode) == 7):
             registerInstructionDict[InR.binToDec(InR.AR)]()
-        #register reffrence set
+        #memory reffrence set
         else:
             memoryInsructionDict[InR.binToDec(InR.opcode)]()

@@ -9,7 +9,6 @@ DR = [0] * 16
 AC = [0] * 16
 IR = [0] * 16
 opcode = [0] * 3
-program = [] #list of all commands in the program.txt 
 cycles = 0 #keeps track of how many cycles need to be completed
 instructions = 0 #keeps track of how many instructions need to be completed
 totalCycles = 0
@@ -22,13 +21,14 @@ E = 1 #error bit
 
 #function thats responsible for making each instruction execute per clockcycle and handeling user inputs
 def checkAndWait():
-
-
+    
     global cycles
     global instructions
     global totalCycles
     global totalInstructions
 
+
+    print("Current clockcycle: T"+ str(totalCycles))
     totalCycles += 1
 
 
@@ -52,9 +52,11 @@ def checkAndWait():
             elif(user_command_split[0] == "next_inst"):
                 instructions += 1
             elif(user_command_split[0] == "fast_inst"):
-                instructions += int(user_command_split[1])
+                instructions += int(user_command_split[1]) 
             elif(user_command_split[0] == "show"):
                 show(user_command_split)
+            elif(user_command_split[0] == "run"):
+                instructions = 10000
         
 def show(option):
     global AC
@@ -74,7 +76,7 @@ def show(option):
     if(option[1] == "IR"):
         print("IR = ",hex(binToDec(IR)), "(binary:",IR,")")
     if(option[1] == "mem"):
-        print("MEM[",option[2],"] = 0x",hex(binToDec(memory[option[2]])), "(binary:",memory[option[2]],")")
+        print("MEM[",option[2],"] = 0x",hex(binToDec(memory[int(option[2])])), "(binary:",memory[int(option[2])],")")
     if(option[1] == "all"):
         print("AC = ",hex(binToDec(AC)), "(binary:",AC,")")
         print("PC = ",hex(binToDec(PC)), "(binary:",PC,")")
@@ -103,7 +105,6 @@ def fetchDecode():
     checkAndWait()
 
     print("AR <--  PC")
-    current = binToDec(PC)
     AR = PC
     
     print("AR = ", AR)
@@ -116,6 +117,8 @@ def fetchDecode():
     bandwidth += 1
     print("Instruction in hand: 0x", hex(binToDec(IR)).split('x')[-1])
     PC = decToBin(binToDec(PC) + 1)
+    print("PC incremented")
+    print(PC)
     AR = IR[4:16]
     print("AR:", AR)
     indirect = IR[0]
@@ -140,8 +143,10 @@ def binToDec(reg):
     return value
     
 def decToBin(num):
-    value = bin(num).replace("0b", "")
     binOut = [0] * 16
+    if(num > 65535):
+        return binOut
+    value = bin(num).replace("0b", "")
     counter = 0
     for i in reversed(value):
         binOut[15-counter] = int(i)
@@ -158,13 +163,6 @@ def hexToBin(num):
 
     return binOut
 
-def incInstructions():
-    global totalInstructions
-    totalInstructions += 1
-
-#!!!!!!!!!!!!!!!!!!!!!!!!!!these values are just here to test register instructions remove them before submitting!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-DR = [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]
-AC = [0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0]
 
 
 
@@ -346,10 +344,12 @@ def ISZ():
     memory[location] = DR
     print("Changed MEM[AR]")
     print("if DR = 0 then PC <-- PC+1")
+    print(binToDec(DR))
     if(binToDec(DR) == 0):
+        print("PC incremented")
         x = binToDec(PC)
 
-        PC = decToBin((x + 1))
+        PC = decToBin((x + 2))
     
     if(instructions > 0):
         instructions -= 1
@@ -455,6 +455,10 @@ def INC():
     AC = decToBin(x)
 
     print("Changed AC")
+
+    if(instructions > 0):
+        instructions -= 1
+    checkAndWait()
 
 def SPA():
     global AC
